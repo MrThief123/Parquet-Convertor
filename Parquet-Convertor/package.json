@@ -1,8 +1,8 @@
 {
-  "name": "praquet convertor",
+  "name": "parquet-convertor",
   "version": "0.1.0",
   "bin": {
-    "praquet convertor": "bin/praquet convertor.js"
+    "parquet-convertor": "bin/parquet-convertor.js"
   },
   "scripts": {
     "build": "tsc",
