@@ -24,7 +24,7 @@ export class ParquetConvertorStack extends cdk.Stack {
     const converterFn = new lambda.Function(this, 'CsvToParquetFn', {
       runtime: lambda.Runtime.PYTHON_3_10,
       handler: 'handler.main',
-      code: lambda.Code.fromAsset('lambda'),
+      code: lambda.Code.fromAsset('lambda/conversion'),
       environment: {
         OUTPUT_BUCKET: outputBucket.bucketName,
       },
