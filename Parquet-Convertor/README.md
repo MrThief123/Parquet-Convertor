@@ -20,22 +20,6 @@ The system is designed to be:
 
 ---
 
-## 📁 Repository Structure
-
-```txt
-.
-├── bin/                    # CDK app entry point
-├── lib/                    # CDK stacks
-├── lambda/                 # Lambda handler code (Python)
-├── layer/
-│   └── python/             # Lambda Layer dependencies (generated)
-├── requirements.txt        # Python dependencies for Lambda
-├── cdk.json
-├── package.json
-└── README.md
-
----
-
 ## AWS Configure 
 
 ```bash
