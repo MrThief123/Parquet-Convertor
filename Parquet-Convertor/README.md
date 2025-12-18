@@ -54,3 +54,4 @@ aws sts get-caller-identity
 docker run --rm -v "$PWD/layer:/layer" public.ecr.aws/sam/build-python3.10:latest \
   pip install -r /layer/requirements.txt --only-binary=:all: -t /layer/python
 
+---
