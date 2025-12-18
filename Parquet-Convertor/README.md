@@ -22,8 +22,12 @@ The system is designed to be:
 
 ## AWS Configure 
 
+### Install AWS CDK
 ```bash
 npm install -g aws-cdk
+```
+
+```bash
 aws configure
 ```
 
