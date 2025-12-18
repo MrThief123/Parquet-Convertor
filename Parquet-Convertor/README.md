@@ -24,18 +24,17 @@ The system is designed to be:
 
 ```bash
 npm install -g aws-cdk
-
-```bash
 aws configure
-
-Verify
 ```
-aws sts get-caller-identity
 
+### Verify
+```bash
+aws sts get-caller-identity
+```
 
 ### Instal Dependencies 
 ``` bash
 docker run --rm -v "$PWD/layer:/layer" public.ecr.aws/sam/build-python3.10:latest \
   pip install -r /layer/requirements.txt --only-binary=:all: -t /layer/python
-
+```
 ---
