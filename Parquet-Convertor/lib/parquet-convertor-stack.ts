@@ -10,13 +10,13 @@ export class ParquetConvertorStack extends cdk.Stack {
     super(scope, id, props);
 
     // Input bucket
-    const inputBucket = new s3.Bucket(this, 'Parquet-Convert-InputBucket-', {
+    const inputBucket = new s3.Bucket(this, '-InputBucket-', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
     // Output bucket
-    const outputBucket = new s3.Bucket(this, 'Parquet-Convert-OutputBucket-', {
+    const outputBucket = new s3.Bucket(this, '-OutputBucket-', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
@@ -34,7 +34,6 @@ export class ParquetConvertorStack extends cdk.Stack {
       code: lambda.Code.fromAsset(
         path.join(__dirname, '../lambda/conversion')
       ),
-      layers: [parquetLayer],
       environment: {
         OUTPUT_BUCKET: outputBucket.bucketName,
       },
