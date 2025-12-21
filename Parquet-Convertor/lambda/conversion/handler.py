@@ -3,6 +3,7 @@ import os
 import boto3
 import pandas as pd
 from botocore.exceptions import BotoCoreError, ClientError
+import requests
 
 s3 = boto3.client("s3")
 

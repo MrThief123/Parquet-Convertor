@@ -21,9 +21,10 @@ export class ParquetConvertorStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // Lambda layer for parquet library
-    const parquetLayer = new lambda.LayerVersion(this, 'ParquetLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../layer')),
+    const requestsLayer = new lambda.LayerVersion(this, 'RequestsLayer', {
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, '../lambda-layer/layer.zip')
+      ),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
     });
 
