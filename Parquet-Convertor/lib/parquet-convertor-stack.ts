@@ -28,7 +28,13 @@ export class ParquetConvertorStack extends cdk.Stack {
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
     });
 
-    // Lambda function
+    const pandasLayer = lambda.LayerVersion.fromLayerVersionArn(
+      this,
+      'AWSSDKPandasLayer',
+      'arn:aws:lambda:ap-southeast-2:336392948345:layer:AWSSDKPandas-Python310:27'
+    );
+
+    // Attach the layer to the Lambda
     const converterFn = new lambda.Function(this, 'CsvToParquetFn', {
       runtime: lambda.Runtime.PYTHON_3_10,
       handler: 'handler.handler',
@@ -41,6 +47,9 @@ export class ParquetConvertorStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       memorySize: 2048,
     });
+
+    converterFn.addLayers(pandasLayer);
+    converterFn.addLayers(requestsLayer);
 
     // Permissions
     inputBucket.grantRead(converterFn);
