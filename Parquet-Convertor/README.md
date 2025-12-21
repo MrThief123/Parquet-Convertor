@@ -42,3 +42,9 @@ docker run --rm -v "$PWD/layer:/layer" public.ecr.aws/sam/build-python3.10:lates
   pip install -r /layer/requirements.txt --only-binary=:all: -t /layer/python
 ```
 ---
+
+### Deploy / Destroy Comand
+```bash
+cdk deploy --require-approval never
+cdk destroy --force
+```
