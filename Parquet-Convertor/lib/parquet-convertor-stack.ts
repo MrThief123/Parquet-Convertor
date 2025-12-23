@@ -22,82 +22,68 @@ export class ParquetConvertorStack extends cdk.Stack {
       allowedHeaders: ['*'],
     });
 
-
     // Output bucket
     const outputBucket = new s3.Bucket(this, '-OutputBucket-', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
+    // Upload URL Lambda
     const uploadUrlFn = new lambda.Function(this, 'UploadUrlFn', {
       runtime: lambda.Runtime.PYTHON_3_10,
       handler: 'handler.handler',
-      code: lambda.Code.fromAsset(
-        path.join(__dirname, '../lambda/upload-url')
-      ),
-      environment: {
-        INPUT_BUCKET: inputBucket.bucketName,
-      },
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/upload-url')),
+      environment: { INPUT_BUCKET: inputBucket.bucketName },
     });
-
     inputBucket.grantPut(uploadUrlFn);
 
-
+    // Converter Lambda
     const requestsLayer = new lambda.LayerVersion(this, 'RequestsLayer', {
-      code: lambda.Code.fromAsset(
-        path.join(__dirname, '../lambda-layer/layer.zip')
-      ),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda-layer/layer.zip')),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
     });
-
     const pandasLayer = lambda.LayerVersion.fromLayerVersionArn(
       this,
       'AWSSDKPandasLayer',
       'arn:aws:lambda:ap-southeast-2:336392948345:layer:AWSSDKPandas-Python310:27'
     );
 
-    // Attach the layer to the Lambda
     const converterFn = new lambda.Function(this, 'CsvToParquetFn', {
       runtime: lambda.Runtime.PYTHON_3_10,
       handler: 'handler.handler',
-      code: lambda.Code.fromAsset(
-        path.join(__dirname, '../lambda/conversion')
-      ),
-      environment: {
-        OUTPUT_BUCKET: outputBucket.bucketName,
-      },
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/conversion')),
+      environment: { OUTPUT_BUCKET: outputBucket.bucketName },
       timeout: cdk.Duration.seconds(60),
       memorySize: 2048,
     });
-
-    converterFn.addLayers(pandasLayer);
-    converterFn.addLayers(requestsLayer);
-
-    // Permissions
+    converterFn.addLayers(pandasLayer, requestsLayer);
     inputBucket.grantRead(converterFn);
     outputBucket.grantWrite(converterFn);
 
-    // Trigger Lambda on CSV upload
     inputBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3n.LambdaDestination(converterFn),
       { suffix: '.csv' }
     );
 
-    
+    // List Lambda
+    const listFn = new lambda.Function(this, 'ListParquetFn', {
+      runtime: lambda.Runtime.PYTHON_3_10,
+      handler: 'handler.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/list-parquet')),
+      environment: { OUTPUT_BUCKET: outputBucket.bucketName },
+    });
+    outputBucket.grantRead(listFn);
 
+    // API Gateway
     const api = new apigw.RestApi(this, 'UploadApi', {
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigw.Cors.ALL_ORIGINS,
-        allowMethods: ['GET'],
-      },
+      defaultCorsPreflightOptions: { allowOrigins: apigw.Cors.ALL_ORIGINS, allowMethods: ['GET', 'OPTIONS'] },
     });
 
-    const upload = api.root.addResource('upload');
-    upload.addMethod('GET', new apigw.LambdaIntegration(uploadUrlFn));
+    api.root.addResource('upload').addMethod('GET', new apigw.LambdaIntegration(uploadUrlFn));
+    api.root.addResource('list').addMethod('GET', new apigw.LambdaIntegration(listFn));
 
-    new cdk.CfnOutput(this, 'UploadApiUrl', {
-      value: api.url + 'upload',
-    });
+    new cdk.CfnOutput(this, 'UploadApiUrl', { value: api.url + 'upload' });
+    new cdk.CfnOutput(this, 'ListApiUrl', { value: api.url + 'list' });
   }
 }
