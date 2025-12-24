@@ -2,29 +2,62 @@
 
 import { useState } from 'react';
 
+const API_UPLOAD_URL = process.env.NEXT_PUBLIC_API_UPLOAD_URL!;
+const API_DOWNLOAD_URL = process.env.NEXT_PUBLIC_API_DOWNLOAD_URL!;
+
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState('');
+  const [uploadedKey, setUploadedKey] = useState<string | null>(null);
 
   async function upload() {
     if (!file) return;
 
-    setStatus('Requesting upload URL...');
+    try {
+      setStatus('Requesting upload URL...');
 
-    const res = await fetch(
-      'https:/px2zpw3ube.execute-api.ap-southeast-2.amazonaws.com/prod/upload-url'
+      const res = await fetch(API_UPLOAD_URL);
+      if (!res.ok) throw new Error('Failed to get upload URL');
+
+      const { uploadUrl, key } = await res.json();
+
+      // store parquet key for download
+      setUploadedKey(key.replace('.csv', '.parquet'));
+
+      setStatus('Uploading CSV...');
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': 'text/csv' },
+      });
+
+      if (!uploadRes.ok) throw new Error('Upload failed');
+
+      setStatus('Upload complete. Converting to Parquet...');
+    } catch (err) {
+      console.error(err);
+      setStatus('Something went wrong');
+    }
+  }
+
+  async function download() {
+    if (!uploadedKey) return;
+
+    setStatus('Preparing download...');
+
+    const r = await fetch(
+      `${API_DOWNLOAD_URL}?key=${encodeURIComponent(uploadedKey)}`
     );
-    const { uploadUrl } = await res.json();
 
-    setStatus('Uploading CSV...');
+    if (!r.ok) {
+      setStatus('Parquet not ready yet');
+      return;
+    }
 
-    await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': 'text/csv' },
-    });
-
-    setStatus('Upload complete. Converting to Parquet...');
+    const { downloadUrl } = await r.json();
+    window.location.href = downloadUrl;
   }
 
   return (
@@ -39,7 +72,15 @@ export default function Home() {
 
       <br /><br />
 
-      <button onClick={upload}>Upload</button>
+      <button onClick={upload} disabled={!file}>
+        Upload
+      </button>
+
+      <br /><br />
+
+      <button onClick={download} disabled={!uploadedKey}>
+        Download Parquet
+      </button>
 
       <p>{status}</p>
     </main>
