@@ -95,5 +95,34 @@ export class ParquetConvertorStack extends cdk.Stack {
       new s3n.LambdaDestination(converterFn),
       { suffix: '.csv' }
     );
+
+    // ==================
+    // CloudFormation Outputs
+    // ==================
+
+    new cdk.CfnOutput(this, 'ApiBaseUrl', {
+      value: api.url,
+      description: 'Base URL for Parquet API',
+    });
+
+    new cdk.CfnOutput(this, 'UploadUrl', {
+      value: `${api.url}upload-url`,
+      description: 'Presigned CSV upload endpoint',
+    });
+
+    new cdk.CfnOutput(this, 'DownloadUrl', {
+      value: `${api.url}download-url`,
+      description: 'Presigned Parquet download endpoint',
+    });
+
+    new cdk.CfnOutput(this, 'InputBucketName', {
+      value: inputBucket.bucketName,
+      description: 'S3 bucket for CSV uploads',
+    });
+
+    new cdk.CfnOutput(this, 'OutputBucketName', {
+      value: outputBucket.bucketName,
+      description: 'S3 bucket for Parquet outputs',
+    });
   }
 }
