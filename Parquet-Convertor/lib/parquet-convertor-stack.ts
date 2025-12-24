@@ -43,6 +43,8 @@ export class ParquetConvertorStack extends cdk.Stack {
     const upload = api.root.addResource('upload-url');
     upload.addMethod('GET', new apigw.LambdaIntegration(uploadUrlFn));
 
+    
+
 
     // Output bucket
     const outputBucket = new s3.Bucket(this, '-OutputBucket-', {
@@ -69,9 +71,24 @@ export class ParquetConvertorStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       memorySize: 2048,
     });
+
+    const downloadUrlFn = new lambda.Function(this, 'PresignDownloadFn', {
+      runtime: lambda.Runtime.PYTHON_3_10,
+      handler: 'handler.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/presign-download')),
+      environment: {
+        OUTPUT_BUCKET: outputBucket.bucketName,
+      },
+    });
+
     converterFn.addLayers(pandasLayer, requestsLayer);
     inputBucket.grantRead(converterFn);
     outputBucket.grantWrite(converterFn);
+    outputBucket.grantRead(downloadUrlFn);
+
+    const download = api.root.addResource('download-url');
+    download.addMethod('GET', new apigw.LambdaIntegration(downloadUrlFn));
+
 
     inputBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
