@@ -17,25 +17,38 @@ export class ParquetConvertorStack extends cdk.Stack {
     });
 
     inputBucket.addCorsRule({
-      allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET],
-      allowedOrigins: ['http://localhost:3000'],
+      allowedMethods: [s3.HttpMethods.PUT],
+      allowedOrigins: ['*'],
       allowedHeaders: ['*'],
     });
+
+    const uploadUrlFn = new lambda.Function(this, 'PresignUploadFn', {
+      runtime: lambda.Runtime.PYTHON_3_10,
+      handler: 'handler.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/presign')),
+      environment: {
+        INPUT_BUCKET: inputBucket.bucketName,
+      },
+    });
+
+    inputBucket.grantPut(uploadUrlFn);
+
+    const api = new apigw.RestApi(this, 'ParquetApi', {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigw.Cors.ALL_ORIGINS,
+        allowMethods: ['GET', 'POST'],
+      },
+    });
+
+    const upload = api.root.addResource('upload-url');
+    upload.addMethod('GET', new apigw.LambdaIntegration(uploadUrlFn));
+
 
     // Output bucket
     const outputBucket = new s3.Bucket(this, '-OutputBucket-', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
-
-    // Upload URL Lambda
-    const uploadUrlFn = new lambda.Function(this, 'UploadUrlFn', {
-      runtime: lambda.Runtime.PYTHON_3_10,
-      handler: 'handler.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/upload-url')),
-      environment: { INPUT_BUCKET: inputBucket.bucketName },
-    });
-    inputBucket.grantPut(uploadUrlFn);
 
     // Converter Lambda
     const requestsLayer = new lambda.LayerVersion(this, 'RequestsLayer', {
@@ -65,25 +78,5 @@ export class ParquetConvertorStack extends cdk.Stack {
       new s3n.LambdaDestination(converterFn),
       { suffix: '.csv' }
     );
-
-    // List Lambda
-    const listFn = new lambda.Function(this, 'ListParquetFn', {
-      runtime: lambda.Runtime.PYTHON_3_10,
-      handler: 'handler.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/list-parquet')),
-      environment: { OUTPUT_BUCKET: outputBucket.bucketName },
-    });
-    outputBucket.grantRead(listFn);
-
-    // API Gateway
-    const api = new apigw.RestApi(this, 'UploadApi', {
-      defaultCorsPreflightOptions: { allowOrigins: apigw.Cors.ALL_ORIGINS, allowMethods: ['GET', 'OPTIONS'] },
-    });
-
-    api.root.addResource('upload').addMethod('GET', new apigw.LambdaIntegration(uploadUrlFn));
-    api.root.addResource('list').addMethod('GET', new apigw.LambdaIntegration(listFn));
-
-    new cdk.CfnOutput(this, 'UploadApiUrl', { value: api.url + 'upload' });
-    new cdk.CfnOutput(this, 'ListApiUrl', { value: api.url + 'list' });
   }
 }
